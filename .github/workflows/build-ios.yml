@@ -21,9 +21,8 @@ jobs:
 
       - name: Compile Native iOS Binary
         env:
-          IPHONEOS_DEPLOYMENT_TARGET: "15.0"
-          RUSTFLAGS: "-C link-arg=-miphoneos-version-min=15.0"
-          CFLAGS: "-miphoneos-version-min=15.0"
+          CARGO_TARGET_AARCH64_APPLE_IOS_LINKER: "cc"
+          CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS: "-C link-arg=-miphoneos-version-min=15.0"
         run: |
           rustup target add aarch64-apple-ios
           cargo build --release --target aarch64-apple-ios --bin pomme-ios --config "build.target='aarch64-apple-ios'"
