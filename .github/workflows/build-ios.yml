@@ -1,0 +1,33 @@
+name: Build Pomme iOS
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Install Cargo Lipo
+        run: cargo install cargo-lipo
+
+      - name: Compile Native iOS Binary
+        run: cargo build --release --target aarch64-apple-ios
+
+      - name: Package IPA File
+        run: |
+          mkdir -p Payload
+          cp target/aarch64-apple-ios/release/pomme Payload/
+          zip -r pomme-ios.ipa Payload
+
+      - name: Upload Finished App
+        uses: actions/upload-artifact@v4
+        with:
+          name: pomme-ios-ipa
+          path: pomme-ios.ipa
