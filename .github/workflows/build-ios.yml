@@ -22,7 +22,7 @@ jobs:
       - name: Compile Native iOS Binary
         run: |
           rustup target add aarch64-apple-ios
-          cargo build --release --target aarch64-apple-ios --config "build.target='aarch64-apple-ios'"
+          cargo build --release --target aarch64-apple-ios --bin pomme --config "build.target='aarch64-apple-ios'"
 
       - name: Package IPA File
         run: |
