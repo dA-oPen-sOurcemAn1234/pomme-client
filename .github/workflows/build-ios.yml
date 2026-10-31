@@ -20,6 +20,8 @@ jobs:
         run: cargo install cargo-lipo
 
       - name: Compile Native iOS Binary
+        env:
+          IPHONEOS_DEPLOYMENT_TARGET: "15.0"
         run: |
           rustup target add aarch64-apple-ios
           cargo build --release --target aarch64-apple-ios --bin pomme-ios --config "build.target='aarch64-apple-ios'"
