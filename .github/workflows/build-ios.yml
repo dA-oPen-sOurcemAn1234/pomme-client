@@ -16,18 +16,28 @@ jobs:
           rustup show
           rustup target add aarch64-apple-ios
 
+      - name: Create Custom Target Specification
+        run: |
+          # Extract Rust's built-in iOS target spec and patch the version minimums to 15.0
+          rustc +nightly -Z unstable-options --print target-spec-json --target aarch64-apple-ios > custom-target.json || \
+          rustc -Z unstable-options --print target-spec-json --target aarch64-apple-ios > custom-target.json
+          
+          # Use sed to safely update the deployment target strings to 15.0
+          sed -i '' 's/-ios_version_min=10.0.0/-ios_version_min=15.0.0/g' custom-target.json
+          sed -i '' 's/ios10.0.0/ios15.0.0/g' custom-target.json
+
       - name: Compile Native iOS Binary
         run: |
+          # Use our modified json specification file as the compilation target
           cargo build --release \
-            --target aarch64-apple-ios \
+            --target custom-target.json \
             --bin pomme-ios \
-            --config "target.aarch64-apple-ios.rustflags=['-C', 'link-arg=-miphoneos-version-min=15.0']" \
-            --config "build.target='aarch64-apple-ios'"
+            --config "build.target='custom-target.json'"
 
       - name: Package IPA File
         run: |
           mkdir -p Payload
-          cp target/aarch64-apple-ios/release/pomme-ios Payload/
+          cp target/custom-target/release/pomme-ios Payload/
           zip -r pomme-ios.ipa Payload
 
       - name: Upload Finished App
