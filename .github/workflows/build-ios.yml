@@ -8,6 +8,9 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
 
       - name: Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
