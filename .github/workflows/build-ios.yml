@@ -22,12 +22,12 @@ jobs:
       - name: Compile Native iOS Binary
         run: |
           rustup target add aarch64-apple-ios
-          cargo build --release --target aarch64-apple-ios --bin pomme --config "build.target='aarch64-apple-ios'"
+          cargo build --release --target aarch64-apple-ios --bin pomme-ios --config "build.target='aarch64-apple-ios'"
 
       - name: Package IPA File
         run: |
           mkdir -p Payload
-          cp target/aarch64-apple-ios/release/pomme Payload/ 2>/dev/null || cp target/release/pomme Payload/
+          cp target/aarch64-apple-ios/release/pomme-ios Payload/
           zip -r pomme-ios.ipa Payload
 
       - name: Upload Finished App
