@@ -28,9 +28,10 @@ jobs:
 
       - name: Compile Native iOS Binary
         run: |
-          # Use our modified json specification file as the compilation target with the required unstable flag
+          # Build both the standard library and the game binary using the custom target specification
           cargo +nightly build --release \
             -Zjson-target-spec \
+            -Zbuild-std=core,alloc,std,panic_unwind \
             --target custom-target.json \
             --bin pomme-ios \
             --config "build.target='custom-target.json'"
