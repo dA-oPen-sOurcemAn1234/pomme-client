@@ -11,14 +11,10 @@ jobs:
         with:
           submodules: 'recursive'
 
-
       - name: Install Rust Toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2025-06-01
-          targets: aarch64-apple-ios
-          override: true
-
+        run: |
+          rustup show
+          rustup target add aarch64-apple-ios
 
       - name: Install Cargo Lipo
         run: cargo install cargo-lipo
