@@ -15,7 +15,7 @@ jobs:
       - name: Install Rust Toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: nightly
           targets: aarch64-apple-ios
           override: true
 
