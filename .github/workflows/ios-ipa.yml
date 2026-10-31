@@ -1,0 +1,119 @@
+name: ios-ipa
+
+# Builds an UNSIGNED Pomme.ipa for sideloading (AltStore, Sideloadly), which
+# re-sign it with your own Apple ID. It does what `just ios-archive` does
+# (xcodegen -> xcodebuild -> pomme-ios/build-app.sh, which builds the Rust
+# binary, links MoltenVK and embeds OpenAL Soft) minus signing and the App
+# Store export, which need a paid team.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  HOMEBREW_NO_AUTO_UPDATE: 1
+  HOMEBREW_NO_INSTALL_CLEANUP: 1
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 150
+    steps:
+      # SteelMC is excluded from the workspace but still resolved by path.
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install xcodegen and cmake
+        run: brew install xcodegen cmake
+
+      # rust-toolchain.toml pins the nightly; install exactly that one.
+      - name: Install the pinned Rust toolchain and the iOS target
+        run: |
+          rustup show active-toolchain || rustup toolchain install --profile minimal
+          rustup target add aarch64-apple-ios
+          rustc --version
+
+      # Same pinned action and version as .github/actions/setup-rust. It sets
+      # VULKAN_SDK, which build-app.sh uses for the host-built shaderc (the
+      # app itself links MoltenVK instead).
+      - name: Install Vulkan SDK
+        uses: jakoch/install-vulkan-sdk-action@37effcfa045411f8bfbbda26df2fd1b3bf3436fa
+        with:
+          vulkan_version: 1.4.341.0
+          install_runtime: false
+          cache: true
+          stripdown: true
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ios-ipa
+          cache-on-failure: true
+
+      # MoltenVK and the OpenAL Soft source/build tree live in target/ outside
+      # cargo's own output. Declared after rust-cache so this saves first.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            target/moltenvk
+            target/openal-soft
+          key: ios-tools-${{ runner.os }}-${{ hashFiles('tools/fetch_moltenvk.py', 'tools/build_openal.py', 'tools/fetch_openal.py', 'pomme-client/third-party/openal-natives.txt') }}
+
+      - name: Generate the Xcode project
+        working-directory: pomme-ios
+        run: xcodegen generate --quiet
+
+      # Same project, scheme and derived-data path as tools/ios.py. Release, so
+      # the Rust client is optimized. With signing off, EXPANDED_CODE_SIGN_IDENTITY
+      # is empty and build-app.sh skips codesigning soft_oal.framework.
+      - name: Build Pomme.app (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project pomme-ios/Pomme.xcodeproj \
+            -scheme Pomme \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath target/ios-build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            build
+
+      - name: Package Pomme.ipa
+        run: |
+          app="target/ios-build/Build/Products/Release-iphoneos/Pomme.app"
+          if [ ! -d "$app" ]; then
+            echo "::error::$app was not produced"
+            find target/ios-build/Build/Products -maxdepth 2 || true
+            exit 1
+          fi
+          file "$app/Pomme"
+          plutil -p "$app/Info.plist" | grep -E 'CFBundleIdentifier|MinimumOSVersion|CFBundleExecutable'
+          ls -la "$app/Frameworks"
+          rm -rf ipa
+          mkdir -p ipa/Payload
+          cp -R "$app" ipa/Payload/
+          (cd ipa && zip -qry Pomme.ipa Payload)
+          unzip -l ipa/Pomme.ipa | head -20
+          ls -lh ipa/Pomme.ipa
+
+      # The IPA is already a zip, so skip recompression. GitHub still wraps
+      # it in a zip when you download it: unzip once to get Pomme.ipa.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Pomme-unsigned-ipa
+          path: ipa/Pomme.ipa
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
