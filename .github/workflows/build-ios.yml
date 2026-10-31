@@ -16,16 +16,13 @@ jobs:
           rustup show
           rustup target add aarch64-apple-ios
 
-      - name: Install Cargo Lipo
-        run: cargo install cargo-lipo
-
       - name: Compile Native iOS Binary
-        env:
-          CARGO_TARGET_AARCH64_APPLE_IOS_LINKER: "cc"
-          CARGO_TARGET_AARCH64_APPLE_IOS_RUSTFLAGS: "-C link-arg=-miphoneos-version-min=15.0"
         run: |
-          rustup target add aarch64-apple-ios
-          cargo build --release --target aarch64-apple-ios --bin pomme-ios --config "build.target='aarch64-apple-ios'"
+          cargo build --release \
+            --target aarch64-apple-ios \
+            --bin pomme-ios \
+            --config "target.aarch64-apple-ios.rustflags=['-C', 'link-arg=-miphoneos-version-min=15.0']" \
+            --config "build.target='aarch64-apple-ios'"
 
       - name: Package IPA File
         run: |
