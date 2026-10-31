@@ -28,8 +28,9 @@ jobs:
 
       - name: Compile Native iOS Binary
         run: |
-          # Use our modified json specification file as the compilation target
-          cargo build --release \
+          # Use our modified json specification file as the compilation target with the required unstable flag
+          cargo +nightly build --release \
+            -Zjson-target-spec \
             --target custom-target.json \
             --bin pomme-ios \
             --config "build.target='custom-target.json'"
